@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+<PropertyGroup><ApplicationIcon>..\GestioApp.Tray\Assets\gestioapp.ico</ApplicationIcon></PropertyGroup>
+<PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PublishAot>false</PublishAot><BuiltInComInteropSupport>true</BuiltInComInteropSupport></PropertyGroup>
+<ItemGroup>
+<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+<PackageReference Include="System.Management" Version="10.0.10" />
+<ProjectReference Include="..\GestioApp.Contracts\GestioApp.Contracts.csproj" />
+</ItemGroup></Project>

@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+publish/
+*.csproj.user
+.vs/
+api-token.txt

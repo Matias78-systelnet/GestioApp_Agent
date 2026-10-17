@@ -1,0 +1,10 @@
+{
+  "apiEnabled": false,
+  "inventoryEndpoint": "",
+  "heartbeatEndpoint": "",
+  "inventorySeconds": 300,
+  "heartbeatSeconds": 60,
+  "activityEnabled": true,
+  "activityApiEnabled": false,
+  "activityEndpoint": ""
+}
