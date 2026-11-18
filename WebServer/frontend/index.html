@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GestioApp — Control de activos TI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+<style>
+/* Paleta: fondo de estudio fotográfico gris claro (los grises slate del panel GestioApp) para que el notebook negro
+   destaque; tarjetas oscuras y el naranjo de marca como acento.
+   Concepto: una sola escena fija con un MacBook Pro real filmado que se reproduce sola como un video (cerrado, se abre solo
+   y se enciende con macOS) y cada capítulo muestra una tarjeta de vidrio, una palabra gigante y la pantalla
+   del sistema que corresponde. */
+:root{
+  --or:#FF6B00; --or-hi:#FF8A33; --or-lo:#C2410C; --or-deep:#7C2D12;
+  --ink:#111827; --ink-2:#1E293B; --night:#0B1120; --glass:rgba(15,23,42,.86); --cream:#F8FAFC; --muted:#94A3B8; --body:#CBD5E1; --mint:#34D399;
+  --studio:#E3E7EC; --on-studio:#1E293B; --on-studio-2:#475569;
+  --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html{scroll-behavior:auto}
+body{margin:0;background:var(--studio);color:var(--cream);font-family:var(--display);-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── Escena fija ── */
+.stage{position:relative;height:100vh;height:100svh;min-height:560px;overflow:hidden;
+  background:
+    radial-gradient(520px 360px at 60% 62%, rgba(255,107,0,.10), transparent 70%),
+    radial-gradient(1200px 800px at 60% 42%, #F7F8FA 0%, #E9ECF0 42%, #D5DBE3 75%, #BCC5D1 100%);}
+.stage::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(30,41,59,.18) 100%)}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.09;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:2;transition:opacity .6s ease}
+.cards,.word,.audit,.shade{transition:opacity .6s ease}
+.stage.fading #scene,.stage.fading .screen,.stage.fading .cards,.stage.fading .word,.stage.fading .audit{opacity:0!important}
+/* Pantalla del sistema sobre el vidrio del notebook (la posiciona el script con matrix3d) */
+.screen{position:absolute;left:0;top:0;width:1440px;height:900px;transform-origin:0 0;z-index:2;pointer-events:none;
+  background:#060709;opacity:0;filter:brightness(var(--on,1));backface-visibility:hidden}
+.screen img{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0}
+.screen .deskapp{opacity:0}
+.screen::after{content:'';position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,.03) 34%,transparent 35%,transparent 100%)}
+
+/* Palabra de cada capítulo: título horizontal abajo a la derecha, como en un video. Cada letra sube
+   desde una máscara (con un pequeño desfase) y, al cambiar de capítulo, la anterior sale hacia arriba. */
+.shade{position:absolute;inset:auto 0 0 0;height:42%;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,rgba(11,17,32,0) 0%,rgba(11,17,32,.28) 55%,rgba(11,17,32,.62) 100%)}
+.word{position:absolute;z-index:4;right:clamp(20px,3vw,40px);bottom:calc(66px + env(safe-area-inset-bottom,0px));
+  height:clamp(56px,min(10.5vw,17vh),170px);width:70vw;pointer-events:none}
+.wline{position:absolute;right:0;bottom:0;display:flex;white-space:nowrap;
+  font:800 clamp(56px,min(10.5vw,17vh),170px)/.86 var(--display);letter-spacing:-.045em;text-transform:uppercase;color:var(--cream);
+  text-shadow:0 18px 50px rgba(2,6,23,.45)}
+.wline .m{display:block;overflow:hidden;padding:0 .01em .06em;margin-bottom:-.06em}
+.wline .c{display:block;transform:translateY(105%);transition:transform .75s cubic-bezier(.2,.8,.2,1);transition-delay:calc(var(--i) * 45ms)}
+.wline.in .c{transform:none}
+.wline.out .c{transform:translateY(-105%);transition-duration:.5s;transition-timing-function:cubic-bezier(.6,0,.8,.2);transition-delay:calc(var(--i) * 25ms)}
+.wline .c.dot{color:var(--or)}
+.wline::after{content:'';position:absolute;left:0;bottom:-12px;height:3px;width:100%;background:var(--or);transform:scaleX(0);transform-origin:left;
+  transition:transform .9s cubic-bezier(.2,.8,.2,1) .25s}
+.wline.in::after{transform:scaleX(1)}
+.wline.out::after{transform-origin:right;transform:scaleX(0);transition-duration:.4s;transition-delay:0s}
+
+/* Barra superior */
+.top{position:fixed;z-index:20;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(16px,3vw,40px)}
+.brand{color:var(--on-studio);display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.brand svg{width:38px;height:38px;border-radius:11px;box-shadow:0 10px 30px -10px rgba(2,6,23,.6)}
+.brand b{color:var(--or);font-weight:800}
+.brand-sub{font:600 10px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-studio-2);margin-left:4px}
+.nav{display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(17,24,39,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(203,213,225,.14)}
+.nav a{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;color:var(--body);transition:background .3s,color .3s}
+.nav a:hover,.nav a[aria-current=true]{background:rgba(203,213,225,.12);color:var(--cream)}
+.nav a.cta{background:linear-gradient(180deg,#C8460D,#C2410C 52%,#B23A0A);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 -2px 0 rgba(110,32,4,.55)}
+.nav a.cta:hover{background:linear-gradient(180deg,#CC4A0E,#C2410C 52%,#B23A0A);color:#fff}
+
+/* Tarjeta de cada capítulo */
+.cards{position:absolute;z-index:5;left:clamp(16px,4vw,64px);top:50%;translate:0 -50%;width:min(400px,calc(100vw - 32px))}
+.card{position:absolute;left:0;top:50%;width:100%;translate:0 -50%;padding:26px 26px 22px;border-radius:24px;
+  background:var(--glass);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
+  border:1px solid rgba(203,213,225,.14);box-shadow:0 40px 80px -30px rgba(2,6,23,.65);
+  opacity:0;transform:translateY(28px) scale(.98);pointer-events:none;transition:opacity .55s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+.card.on{opacity:1;transform:none;pointer-events:auto}
+.kick{display:flex;align-items:center;gap:10px;font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--or-hi)}
+.kick::before{content:'';width:22px;height:1px;background:var(--or-hi)}
+.card h2{margin:14px 0 10px;font:400 clamp(34px,4vw,46px)/1 var(--serif);letter-spacing:-.01em;color:var(--cream);text-wrap:balance}
+.card h2 em{display:block;font-style:italic;color:var(--or-hi)}
+.card p{margin:0;font-size:15px;line-height:1.6;color:var(--body);max-width:52ch}
+.data{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.data span{font:600 11.5px/1 var(--mono);padding:7px 10px;border-radius:999px;background:rgba(203,213,225,.08);border:1px solid rgba(203,213,225,.14);color:var(--cream);font-variant-numeric:tabular-nums}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+/* Botones "tecla de equipo": cara con luz arriba, labio inferior y hundimiento al presionar (texto blanco ≥ 4.8:1) */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:12px;font:700 14px/1 var(--display);text-decoration:none;border:0;cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.2,1),box-shadow .16s cubic-bezier(.2,.8,.2,1),background .2s}
+.btn.pri{background:linear-gradient(180deg,#C8460D,#C2410C 52%,#B23A0A);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 -3px 0 rgba(110,32,4,.55),0 10px 18px -12px rgba(194,65,12,.8)}
+.btn.pri:hover{transform:translateY(-1px);background:linear-gradient(180deg,#CC4A0E,#C2410C 52%,#B23A0A)}
+.btn.pri:active{transform:translateY(2px);box-shadow:inset 0 2px 3px rgba(80,22,2,.45)}
+.btn.sec{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));color:var(--cream);border:1px solid rgba(203,213,225,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 0 rgba(0,0,0,.35)}
+.btn.sec:hover{transform:translateY(-1px);border-color:rgba(203,213,225,.7)}
+.btn.sec:active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.35)}
+@media (prefers-reduced-motion:reduce){.btn,.btn:hover,.btn:active{transform:none}}
+.btn:focus-visible,.nav a:focus-visible{outline:2px solid var(--cream);outline-offset:3px}
+.brand:focus-visible{outline:2px solid var(--or-lo);outline-offset:3px}
+.mail{margin-top:14px;font:500 12px/1.4 var(--mono);color:var(--muted)}
+.mail b{color:var(--cream);user-select:all}
+
+/* Registro de auditoría (capítulo 5) */
+.audit{position:absolute;z-index:5;right:clamp(20px,3vw,40px);top:44%;translate:0 -50%;width:min(360px,34vw);display:grid;gap:10px;pointer-events:none}
+.arow{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;padding:12px 14px;border-radius:16px;background:rgba(17,24,39,.78);border:1px solid rgba(203,213,225,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;transform:translateX(30px);transition:opacity .5s ease,transform .6s cubic-bezier(.22,1,.36,1)}
+.audit.on .arow{opacity:1;transform:none}
+.audit.on .arow:nth-child(2){transition-delay:.12s}.audit.on .arow:nth-child(3){transition-delay:.24s}.audit.on .arow:nth-child(4){transition-delay:.36s}
+.stamp{grid-row:span 2;font:600 11px/1.25 var(--mono);padding:6px 8px;border-radius:8px;background:var(--or-lo);color:#fff;text-align:center}
+.arow b{font-size:13px;font-weight:700;color:var(--cream)}
+.arow small{font-size:12px;color:var(--muted)}
+.tag{display:inline-block;margin-right:6px;font:600 10px/1 var(--mono);padding:3px 6px;border-radius:6px;letter-spacing:.04em}
+.t-asg{background:rgba(255,138,51,.2);color:var(--or-hi)}.t-new{background:rgba(52,211,153,.18);color:var(--mint)}.t-del{background:rgba(248,113,113,.18);color:#FCA5A5}
+
+/* App de escritorio GestioApp (capítulo 4): vive DENTRO de la pantalla del notebook, sobre el escritorio
+   de macOS, alineada por homografía igual que las demás capturas. Tamaño de diseño 1440×900. */
+.deskapp{position:absolute;inset:0;font-family:var(--display)}
+.screen .deskapp > img{opacity:1}
+.dk-win{position:absolute;left:64px;top:50px;width:1312px;height:744px;display:flex;flex-direction:column;border-radius:18px;overflow:hidden;
+  background:#0B1120;border:1px solid rgba(203,213,225,.18);box-shadow:0 40px 90px -20px rgba(2,6,23,.75)}
+.dk-bar{height:50px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;background:#111827;border-bottom:1px solid rgba(203,213,225,.1)}
+.dk-bar i{width:15px;height:15px;border-radius:50%;display:block}
+.dk-bar i:nth-child(1){background:#FF5F57}.dk-bar i:nth-child(2){background:#FEBC2E}.dk-bar i:nth-child(3){background:#28C840}
+.dk-bar span{flex:1;text-align:center;margin-right:66px;font:600 17px/1 var(--display);color:var(--muted)}
+.dk-main{flex:1;display:flex;min-height:0}
+.dk-body{flex:1;min-width:0;padding:34px 48px;display:flex;flex-direction:column;gap:22px}
+.dk-crumb{font:600 16px/1 var(--mono);color:var(--muted)}
+.dk-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dk-head h3{margin:0;font:800 48px/1 var(--display);letter-spacing:-.02em;color:var(--cream)}
+.dk-pill{font:700 16px/1 var(--mono);padding:9px 14px;border-radius:999px}
+.dk-pill.ok{background:rgba(52,211,153,.16);color:var(--mint)}
+.dk-pill.id{background:rgba(203,213,225,.08);color:var(--body)}
+.dk-cols{flex:1;display:grid;min-height:0}
+.dk-panel{border-radius:20px;background:rgba(203,213,225,.04);border:1px solid rgba(203,213,225,.1);padding:30px 34px}
+.dk-panel h4{margin:0 0 24px;font:600 18px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--or-hi)}
+.dk-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:0}
+.dk-specs > div{display:grid;gap:10px;padding:22px 24px;border-radius:16px;background:rgba(203,213,225,.06)}
+.dk-specs dt{margin:0;font:600 16px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.dk-specs dd{margin:0;font:700 26px/1.2 var(--display);color:var(--cream)}
+.dk-specs .sn{grid-column:1 / -1;background:var(--cream)}
+.dk-specs .sn dt{color:var(--or-lo)}.dk-specs .sn dd{font:600 34px/1.15 var(--mono);color:var(--ink)}
+
+/* Indicadores */
+.foot{position:absolute;z-index:6;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;padding:0 clamp(16px,3vw,40px);font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-studio-2)}
+/* Pausa: no se muestra, pero aparece al llegar con el teclado (Tab) — la animación dura más de 5 s (WCAG 2.2.2) */
+.pbtn{position:absolute;left:clamp(16px,3vw,40px);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:7;padding:9px 14px;border-radius:999px;border:0;
+  background:var(--ink);color:var(--cream);font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
+.pbtn:focus-visible{opacity:1;pointer-events:auto;transform:none;outline:2px solid var(--or-hi);outline-offset:3px}
+.foot{justify-content:flex-end;color:rgba(248,250,252,.82)}
+.count{font-variant-numeric:tabular-nums}
+.count b{font-weight:600;color:var(--or-hi)}
+
+.end{position:relative;z-index:10;background:#060912;border-top:1px solid rgba(148,163,184,.12);color:var(--muted);padding-block:28px;padding-inline:clamp(16px,3vw,40px);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:13px}
+.end b{color:var(--cream)}
+
+
+
+@media (max-width:820px){
+  .nav a:not(.cta){display:none}
+  .cards{top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));translate:none;left:16px}
+  .card{top:auto;bottom:0;translate:none;padding:20px}
+  .card h2{font-size:32px}
+  .card p{font-size:14px}
+  .audit{display:none}
+  .brand-sub{display:none}
+  .word{left:16px;right:16px;width:auto;bottom:auto;top:calc(80px + env(safe-area-inset-top,0px));height:15vw}
+  .wline{right:auto;left:0;font-size:15vw}
+  .shade{inset:0 0 auto 0;height:34%;background:linear-gradient(0deg,rgba(11,17,32,0),rgba(11,17,32,.5))}
+}
+@media (prefers-reduced-motion:reduce){
+  .wline .c,.wline.out .c{transition:none}
+  .wline::after{transition:none}
+  .card,.arow{transition:opacity .2s ease}
+  .card,.arow,.audit.on .arow{transform:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#c0" aria-label="GestioApp, inicio">
+    <svg viewBox="0 0 720 720" aria-hidden="true"><rect width="720" height="720" rx="165" fill="#111827"/><path d="M528 175H187A55 55 0 0 0 132 230V430A55 55 0 0 0 187 485H533A55 55 0 0 0 588 430V232" fill="none" stroke="#FF6B00" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><circle cx="588" cy="162" r="55" fill="#111827"/><circle cx="588" cy="162" r="41" fill="#34D399"/><rect x="334" y="480" width="52" height="75" fill="#FF6B00"/><rect x="246" y="550" width="228" height="42" rx="21" fill="#FF6B00"/><path d="M437 283A88 88 0 1 0 447 340H372" fill="none" stroke="#fff" stroke-width="38" stroke-linecap="round"/></svg>
+    <span>Gestio<b>App</b></span><span class="brand-sub">Un estudio<br>de control</span>
+  </a>
+  <nav class="nav" aria-label="Capítulos">
+    <a href="#c1" data-go="1">Inventario</a>
+    <a href="#c3" data-go="3">Trazabilidad</a>
+    <a href="#c4" data-go="4">Auditoría</a>
+    <a href="#c5" data-go="5">Seguridad</a>
+    <a href="#c6" data-go="6">Demo</a>
+    <a href="app.html#/login" class="cta login">Iniciar sesión →</a>
+  </nav>
+</header>
+
+<div class="stage" id="stage">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="shade" aria-hidden="true"></div>
+  <div class="word" id="word" aria-hidden="true"></div>
+  <canvas id="scene" aria-label="MacBook Pro real sobre un escritorio: se abre solo, se enciende con macOS Sequoia y muestra GestioApp" role="img"></canvas>
+  <div class="screen" id="screen" aria-hidden="true">
+    <img id="scr-escritorio" src="img/real/pantalla-escritorio.webp" alt="" decoding="async">
+    <!-- App de escritorio GestioApp con la ficha de este mismo equipo (capítulo 4) -->
+    <div id="scr-app" class="deskapp">
+      <img src="img/real/pantalla-escritorio.webp" alt="" decoding="async">
+      <div class="dk-win">
+        <div class="dk-bar"><i></i><i></i><i></i><span>GestioApp — Inventario</span></div>
+        <div class="dk-main">
+          <div class="dk-body">
+            <div class="dk-crumb">Inventario / Notebooks / GA-0042</div>
+            <div class="dk-head"><h3>MacBook Pro 15"</h3><span class="dk-pill ok">● Asignado</span><span class="dk-pill id">GA-0042</span></div>
+            <div class="dk-cols">
+              <section class="dk-panel">
+                <h4>Ficha del equipo</h4>
+                <dl class="dk-specs">
+                  <div><dt>Procesador</dt><dd>Intel Core i7 · 6 núcleos</dd></div>
+                  <div><dt>Memoria RAM</dt><dd>16 GB DDR4 · 2400 MHz</dd></div>
+                  <div><dt>Almacenamiento</dt><dd>SSD 512 GB NVMe</dd></div>
+                  <div><dt>Sistema</dt><dd>macOS Sequoia 15</dd></div>
+                  <div><dt>Sede</dt><dd>Casa Matriz</dd></div>
+                  <div><dt>Responsable</dt><dd>María González</dd></div>
+                  <div class="sn"><dt>N° de serie</dt><dd>C02GA0042MD6</dd></div>
+                </dl>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <img id="scr-aviso" src="img/real/pantalla-aviso.webp" alt="" decoding="async">
+    <img id="scr-bloqueo" src="img/real/pantalla-bloqueo.webp" alt="" decoding="async">
+  </div>
+
+  <div class="cards" id="cards">
+    <article class="card on" data-i="0">
+      <p class="kick">01 · GestioApp</p>
+      <h2>Cada equipo, <em>una historia.</em></h2>
+      <p>Inventario TI para PyMEs con varias sedes: quién tiene qué equipo, dónde está y qué le ha pasado.</p>
+      <div class="data"><span>8 activos</span><span>5 sedes</span><span>4 usuarios</span></div>
+    </article>
+    <article class="card" data-i="1">
+      <p class="kick">02 · Inventario</p>
+      <h2>Un nombre. <em>Un responsable.</em></h2>
+      <p>Cada activo lleva su etiqueta con número de serie, sede y la persona a cargo. Se acabó el «¿dónde está este equipo?».</p>
+      <div class="data"><span>S/N C02GA0042MD6</span><span>Casa Matriz</span><span>María González</span></div>
+    </article>
+    <article class="card" data-i="2">
+      <p class="kick">03 · Dashboard</p>
+      <h2>Ábrelo <em>y míralo todo.</em></h2>
+      <p>Total de activos, asignados, disponibles y alertas pendientes, al día desde cualquier sede.</p>
+      <div class="data"><span>MacBook Pro 15"</span><span>Core i7</span><span>16 GB RAM</span><span>SSD 512 GB</span><span>macOS Sequoia 15</span></div>
+    </article>
+    <article class="card" data-i="3">
+      <p class="kick">04 · Trazabilidad</p>
+      <h2>Por dentro, <em>pieza por pieza.</em></h2>
+      <p>Modelo, serie, ubicación y estado de cada equipo. Si algo cambia de manos o de sede, queda registrado.</p>
+      <div class="data"><span>Serie</span><span>Modelo</span><span>Sede</span><span>Estado</span></div>
+    </article>
+    <article class="card" data-i="4">
+      <p class="kick">05 · Auditoría</p>
+      <h2>Cada cambio <em>queda escrito.</em></h2>
+      <p>Creaciones, asignaciones, modificaciones y bajas con usuario, fecha y hora. Listo para cualquier revisión.</p>
+      <div class="data"><span>Creación</span><span>Modificación</span><span>Eliminación</span><span>CSV</span></div>
+    </article>
+    <article class="card" data-i="5">
+      <p class="kick">06 · Seguridad</p>
+      <h2>Protegido <em>de punta a punta.</em></h2>
+      <p>Conexión por FortiClient VPN, doble factor con Google Authenticator y sesiones que se cierran solas por inactividad.</p>
+      <div class="data"><span>VPN</span><span>2FA</span><span>Cierre a los 30 min</span></div>
+    </article>
+    <article class="card" data-i="6">
+      <p class="kick">07 · Todo junto</p>
+      <h2>Optimiza, audita <em>y protege.</em></h2>
+      <p>Inventario, usuarios, auditoría y descargas en una sola plataforma pensada para PyMEs chilenas.</p>
+      <div class="btns">
+        <button class="btn pri" type="button" id="copyMail">Solicitar demo →</button>
+        <a class="btn sec" href="app.html#/login">Entrar al panel</a>
+      </div>
+      <p class="mail" id="mailNote">Escríbenos a <b>soporte@gestioapp.cl</b></p>
+    </article>
+  </div>
+
+  <div class="audit" id="audit" aria-hidden="true">
+    <div class="arow"><span class="stamp">10/10<br>10:41</span><b><span class="tag t-asg">ASIGNACIÓN</span>Notebook ThinkPad T14</b><small>a Carlos Muñoz · por Admin</small></div>
+    <div class="arow"><span class="stamp">10/10<br>10:38</span><b><span class="tag t-new">CREACIÓN</span>Notebook HP 240 G10</b><small>Bodega · por Admin</small></div>
+    <div class="arow"><span class="stamp">10/10<br>10:12</span><b><span class="tag t-asg">MODIFICACIÓN</span>Exportó activos a CSV</b><small>por Carlos Muñoz</small></div>
+    <div class="arow"><span class="stamp">09/10<br>17:45</span><b><span class="tag t-del">ELIMINACIÓN</span>PC Desktop Optiplex</b><small>dado de baja · por Admin</small></div>
+  </div>
+
+  <button class="pbtn" type="button" id="playBtn">Pausar animación</button>
+  <div class="foot">
+    <span class="count" id="count"><b>01</b> / 07 · GestioApp</span>
+  </div>
+</div>
+
+<footer class="end"><span><b>GestioApp</b> · Control de activos TI para PyMEs · Chile</span><span>soporte@gestioapp.cl · +56 2 2345 6789</span></footer>
+
+<script src="js/landing-seq.js"></script>
+<script>
+(() => {
+const N = 7;
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const WORDS = ['GESTIO','ASIGNA','CONTROLA','DETALLE','AUDITA','PROTEGE',''];   // el cierre va sin palabra
+const NAMES = ['GestioApp','Inventario','Dashboard','Trazabilidad','Auditoría','Seguridad','Todo junto'];
+const $ = s => document.querySelector(s);
+const cards = [...document.querySelectorAll('.card')];
+const wordEl = $('#word'), countEl = $('#count'), auditEl = $('#audit');
+const navLinks = [...document.querySelectorAll('.nav a')].filter(a => a.dataset.go);
+
+navLinks.forEach(a => a.addEventListener('click', e => { e.preventDefault(); goTo(+a.dataset.go); }));
+$('.brand').addEventListener('click', e => { e.preventDefault(); goTo(0); });
+
+// Botón de demo: copia el correo (los enlaces mailto no siempre funcionan aquí)
+$('#copyMail').addEventListener('click', async () => {
+  const note = $('#mailNote');
+  try { await navigator.clipboard.writeText('soporte@gestioapp.cl'); note.innerHTML = 'Correo copiado: <b>soporte@gestioapp.cl</b>'; }
+  catch { const r = document.createRange(); r.selectNodeContents(note.querySelector('b')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+});
+
+/* ── Línea de tiempo: la escena se reproduce sola como un video ──
+   head avanza de 0 a N-1 (un capítulo cada D segundos, con su pausa incluida), se detiene un rato en el
+   último y vuelve a empezar con un fundido. El menú salta a un capítulo con una transición. */
+const D = 4.6, END_HOLD = 4.5, TOTAL = (N - 1) + END_HOLD / D;
+const stageEl = $('#stage'), playBtn = $('#playBtn');
+let head = 0, playing = !REDUCE, ready = false, tween = null, fading = false, snap = false, unfade = false;
+setTimeout(() => { ready = true; }, 4000);   // aunque falten cuadros, no se espera más de 4 s
+function setPlaying(v) {
+  playing = v;
+  playBtn.textContent = v ? 'Pausar animación' : 'Reproducir animación';
+}
+setPlaying(playing);
+playBtn.addEventListener('click', () => {
+  if (!playing && head >= N - 1 && !tween) { head = 0; snap = true; }   // al terminar, reproducir vuelve al inicio
+  setPlaying(!playing);
+});
+function goTo(i) {
+  if (REDUCE) { head = i; tween = null; return; }
+  tween = { from: Math.min(head, N - 1), to: i, t0: performance.now(), dur: 900 + 350 * Math.min(3, Math.abs(i - head)) };
+}
+const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+let lastT = performance.now();
+function tick(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  if (tween) {
+    const u = Math.min(1, (now - tween.t0) / tween.dur);
+    head = tween.from + (tween.to - tween.from) * easeIO(u);
+    if (u >= 1) { head = tween.to; tween = null; }
+  } else if (playing && ready && !fading) {
+    head += dt / D;
+    if (head >= TOTAL) {
+      fading = true; stageEl.classList.add('fading');
+      // Reinicio: con la escena ya oculta se salta al inicio de golpe (snap evita que el suavizado la
+      // "rebobine" pasando por todos los capítulos) y recién después se vuelve a mostrar.
+      setTimeout(() => {
+        head = 0; tween = null; snap = true; unfade = true;
+      }, 650);
+    }
+  }
+  // se vuelve a mostrar recién cuando el capítulo 1 ya quedó dibujado (aunque el equipo vaya lento)
+  if (unfade && !snap && current === 0) {
+    unfade = false;
+    setTimeout(() => { stageEl.classList.remove('fading'); fading = false; }, 120);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+function progress() { return Math.max(0, Math.min(N - 1, head)); }
+let current = -1;
+// Palabra del capítulo: cada letra en su máscara; la anterior sale hacia arriba y se elimina
+function showWord(txt) {
+  wordEl.querySelectorAll('.wline').forEach(old => {
+    old.classList.remove('in'); old.classList.add('out');
+    setTimeout(() => old.remove(), REDUCE ? 0 : 700);
+  });
+  if (!txt) return;
+  const line = document.createElement('div');
+  line.className = 'wline';
+  [...txt].forEach((ch, k) => {
+    const m = document.createElement('span'); m.className = 'm';
+    const c = document.createElement('span'); c.className = 'c'; c.textContent = ch; c.style.setProperty('--i', k);
+    m.appendChild(c); line.appendChild(m);
+  });
+  const m = document.createElement('span'); m.className = 'm';
+  const d = document.createElement('span'); d.className = 'c dot'; d.textContent = '.'; d.style.setProperty('--i', txt.length);
+  m.appendChild(d); line.appendChild(m);
+  wordEl.appendChild(line);
+  requestAnimationFrame(() => requestAnimationFrame(() => line.classList.add('in')));
+}
+function setChapter(i) {
+  if (i === current) return;
+  current = i;
+  cards.forEach((c, k) => { c.classList.toggle('on', k === i); c.setAttribute('aria-hidden', k === i ? 'false' : 'true'); });
+  navLinks.forEach(a => a.setAttribute('aria-current', +a.dataset.go === i ? 'true' : 'false'));
+  countEl.innerHTML = `<b>${String(i + 1).padStart(2, '0')}</b> / 07 · ${NAMES[i]}`;
+  showWord(WORDS[i]);
+  auditEl.classList.toggle('on', i === 4);
+}
+setChapter(0);
+
+/* ═══════════ Escena real ═══════════
+   Un MacBook Pro filmado (secuencia de cuadros) que se reproduce solo: cerrado sobre el escritorio, se abre
+   solo y se enciende con macOS. Las pantallas del sistema se dibujan encima del vidrio con perspectiva
+   (matrix3d), así se ven nítidas a cualquier tamaño y cambian según el capítulo. */
+const SEQ = window.LANDING_SEQ;
+const canvas = $('#scene'), ctx = canvas.getContext('2d');
+if (!SEQ || !ctx) {
+  ready = true;
+  (function loop() { snap = false; setChapter(Math.round(progress())); requestAnimationFrame(loop); })();
+  return;
+}
+const IW = SEQ.w, IH = SEQ.h, COUNT = SEQ.count;
+const screenEl = $('#screen');
+const SCREENS = { escritorio: $('#scr-escritorio'), app: $('#scr-app'), aviso: $('#scr-aviso'), bloqueo: $('#scr-bloqueo') };
+const SW = 1440, SH = 900;   // tamaño de las pantallas del sistema
+
+/* ── Carga de cuadros: primero los de cada capítulo, después el resto en orden ── */
+const frames = new Array(COUNT);
+const NARROW_START = innerWidth < 820;
+const STEP = NARROW_START ? 2 : 1;   // en pantallas chicas se carga uno de cada dos cuadros
+const src = i => `img/real/seq/${String(i).padStart(3, '0')}.webp`;
+let dirty = true, loaded = 0;
+function load(i) {
+  if (frames[i]) return;
+  const im = new Image(); im.decoding = 'async';
+  im.onload = () => { im.ok = true; dirty = true; if (++loaded >= Math.ceil(COUNT / STEP) * 0.85) ready = true; };
+  im.src = src(i); frames[i] = im;
+}
+const tToIndex = t => Math.max(0, Math.min(COUNT - 1, Math.round((t - SEQ.t0) * SEQ.fps)));
+
+/* ── Estados por capítulo ──
+   t: segundo del video · z: acercamiento · f: punto de la imagen que se encuadra · x/y: dónde cae en pantalla (0..1)
+   scr: qué pantalla del sistema muestra el notebook */
+const S = [
+  { t: 1.0,  z: 1.00, f: [800, 470], x: 0.58, y: 0.50, scr: 'escritorio' },  // 01 cerrado sobre el escritorio
+  { t: 8.4,  z: 1.18, f: [790, 500], x: 0.50, y: 0.52, scr: 'escritorio' },  // 02 aún cerrado: etiqueta, sede y responsable
+  { t: 13.6, z: 1.30, f: [800, 450], x: 0.60, y: 0.52, scr: 'escritorio' },  // 03 se abre solo y enciende con macOS
+  { t: 18.0, z: 1.55, f: [800, 520], x: 0.62, y: 0.54, scr: 'app' },         // 04 de cerca: la app GestioApp con la ficha y la trazabilidad del equipo
+  { t: 18.0, z: 1.08, f: [800, 455], x: 0.47, y: 0.52, scr: 'aviso' },       // 05 aviso de cambio registrado
+  { t: 18.0, z: 1.22, f: [800, 460], x: 0.61, y: 0.52, scr: 'bloqueo' },     // 06 bloqueado: solo entra su responsable
+  { t: 18.0, z: 1.00, f: [800, 470], x: 0.60, y: 0.50, scr: 'escritorio' },  // 07 todo junto
+];
+S.forEach(s => load(tToIndex(s.t)));
+for (let i = 0; i < COUNT; i += STEP) load(i);
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => t * t * (3 - 2 * t);
+function stateAt(p) {
+  const k = Math.min(N - 2, Math.floor(p)), f = p - k;
+  // Cada capítulo se "detiene" un rato antes de pasar al siguiente
+  const t = smooth(Math.max(0, Math.min(1, (f - 0.18) / 0.64)));
+  const a = S[k], b = S[k + 1];
+  return {
+    t: lerp(a.t, b.t, t), z: lerp(a.z, b.z, t), fx: lerp(a.f[0], b.f[0], t), fy: lerp(a.f[1], b.f[1], t),
+    x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), scrA: a.scr, scrB: b.scr, mix: t,
+  };
+}
+
+/* ── Homografía: rectángulo de la captura → cuatro esquinas del vidrio en pantalla ── */
+function homography(dst) {
+  const s = [[0, 0], [SW, 0], [SW, SH], [0, SH]], A = [], B = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = s[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v);
+  }
+  for (let c = 0; c < 8; c++) {   // eliminación gaussiana con pivoteo
+    let m = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[m][c])) m = r;
+    [A[c], A[m]] = [A[m], A[c]]; [B[c], B[m]] = [B[m], B[c]];
+    for (let r = 0; r < 8; r++) { if (r === c) continue; const k = A[r][c] / A[c][c]; for (let j = c; j < 8; j++) A[r][j] -= k * A[c][j]; B[r] -= k * B[c]; }
+  }
+  const h = B.map((v, i) => v / A[i][i]);
+  return `matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`;
+}
+
+/* Relleno para pantallas altas: el cuadro reducido a 48 px y ampliado sirve de fondo desenfocado
+   (funciona en todos los navegadores, sin ctx.filter) y el cuadro nítido se funde con él arriba y abajo. */
+const tiny = document.createElement('canvas'); tiny.width = 48; tiny.height = 27;
+const tctx = tiny.getContext('2d');
+const off = document.createElement('canvas'), octx = off.getContext('2d');
+function drawFilled(img, sc, tx, ty) {
+  if (!(W > 0 && H > 0 && sc > 0 && isFinite(tx) && isFinite(ty))) return;   // lienzo de tamaño 0 (p. ej. al redimensionar)
+  tctx.drawImage(img, 0, 0, 48, 27);
+  const cs = Math.max(W / IW, H / IH), bw = IW * cs, bh = IH * cs;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(tiny, (W - bw) / 2, (H - bh) / 2, bw, bh);
+  if (off.width !== canvas.width || off.height !== canvas.height) { off.width = canvas.width; off.height = canvas.height; }
+  octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  octx.globalCompositeOperation = 'source-over'; octx.clearRect(0, 0, W, H);
+  octx.drawImage(img, tx, ty, IW * sc, IH * sc);
+  const h = IH * sc, f = Math.min(90, h * 0.2), g = octx.createLinearGradient(0, ty, 0, ty + h);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(f / h, '#000'); g.addColorStop(1 - f / h, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  octx.globalCompositeOperation = 'destination-in'; octx.fillStyle = g; octx.fillRect(0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(off, 0, 0);
+}
+
+let W = 0, H = 0, DPR = 1, narrow = false;
+function resize() {
+  // Tamaño real del lienzo (sin la barra de desplazamiento): si no, la imagen se comprime y la pantalla no calza
+  W = canvas.clientWidth || innerWidth; H = canvas.clientHeight || innerHeight; narrow = W < 820; DPR = Math.min(2, devicePixelRatio || 1);
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); dirty = true;
+}
+addEventListener('resize', resize); resize();
+
+let mx = 0, smx = 0;
+addEventListener('pointermove', e => { mx = e.clientX / W - .5; }, { passive: true });
+
+let sp = progress(), last = performance.now(), lastKey = '';
+function nearestLoaded(i) {
+  for (let d = 0; d < COUNT; d++) {
+    if (frames[i - d] && frames[i - d].ok) return frames[i - d];
+    if (frames[i + d] && frames[i + d].ok) return frames[i + d];
+  }
+  return null;
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const p = progress();
+  if (snap) { sp = p; snap = false; dirty = true; }
+  else sp += (p - sp) * (REDUCE ? 1 : Math.min(1, dt * 6));
+  setChapter(Math.round(sp));
+  const s = stateAt(sp);
+  smx += (mx - smx) * Math.min(1, dt * 3);
+
+  // Encuadre: "cover" + acercamiento, con el punto f llevado a (x, y) de la pantalla, sin dejar bordes vacíos.
+  // En pantallas angostas el equipo se ajusta al ancho y queda entre la palabra y la tarjeta; arriba y abajo
+  // se rellena con el mismo cuadro desenfocado.
+  const cover = Math.max(W / IW, H / IH);
+  const sc = narrow ? Math.min(cover, (W * 0.96 / 640) * (1 + (s.z - 1) * 0.6)) : cover * s.z;
+  const px = narrow ? 0.5 : s.x + (REDUCE ? 0 : smx * 0.015), py = narrow ? 0.36 : s.y;
+  let tx = px * W - s.fx * sc, ty = py * H - s.fy * sc;
+  tx = Math.min(0, Math.max(W - IW * sc, tx));
+  if (IH * sc >= H) ty = Math.min(0, Math.max(H - IH * sc, ty));
+
+  let idx = tToIndex(s.t); if (STEP > 1) idx -= idx % STEP;
+  const key = `${idx}|${sc.toFixed(4)}|${tx.toFixed(1)}|${ty.toFixed(1)}|${s.mix.toFixed(3)}|${W}x${H}`;
+  if (dirty || key !== lastKey) {
+    lastKey = key; dirty = false;
+    const img = nearestLoaded(idx);
+    if (img) {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      if (IH * sc < H) drawFilled(img, sc, tx, ty);
+      else ctx.drawImage(img, tx, ty, IW * sc, IH * sc);
+    }
+
+    // Pantalla del sistema sobre el vidrio
+    const on = SEQ.on[idx];
+    if (on > 0.001) {
+      const q = SEQ.quad[idx].map(([x, y]) => [x * sc + tx, y * sc + ty]);
+      screenEl.style.transform = homography(q);
+      screenEl.style.opacity = 1;
+      screenEl.style.setProperty('--on', (0.12 + 0.88 * Math.pow(on, 0.55)).toFixed(3));
+      for (const k in SCREENS) {
+        const o = (k === s.scrA ? 1 - s.mix : 0) + (k === s.scrB ? s.mix : 0);
+        SCREENS[k].style.opacity = Math.min(1, o).toFixed(3);
+      }
+    } else screenEl.style.opacity = 0;
+  }
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

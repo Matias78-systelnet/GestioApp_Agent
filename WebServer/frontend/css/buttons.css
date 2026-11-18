@@ -1,0 +1,170 @@
+/* ═══ GestioApp — Botones "tecla de equipo" (buttons.css) ═══════════════════════════════════════
+   Se carga después de styles.css y motion.css. Solo cambia la estética de los botones; los colores
+   del sistema (naranja #FF6B00 / --brand-strong, grafito, blancos) son los mismos.
+
+   Idea: GestioApp gestiona hardware, así que los botones se comportan como teclas físicas.
+   - Cara con luz arriba (borde interior claro) y un "labio" inferior más oscuro.
+   - Al pasar el cursor la tecla sube 1 px; al presionarla baja y el labio se aplana.
+   - El ícono vive en una pequeña tapa propia, como la leyenda de una tecla.
+   Se reemplazan los efectos genéricos anteriores (barrido de brillo, pulso y halo naranjo difuso).
+
+   CONTRASTE: el degradado del primario va de #C8460D a #B23A0A; texto blanco ≥ 4.8:1 en todo el
+   botón. Bordes de botones secundarios #94A3B8 sobre blanco = 2.6:1 → se suma el labio #CBD5E1 y el
+   texto ≥ 7:1; el límite del control lo marcan el borde + la sombra (1.4.11 se cumple con el foco
+   y el texto, como en el sistema base). Foco: el anillo de 3 px de styles.css no se toca.
+   ════════════════════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --key-radius: 11px;
+  --key-press: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ── Base común ── */
+.btn {
+  border-radius: var(--key-radius);
+  letter-spacing: -.005em;
+  transition: transform .16s var(--key-press), box-shadow .16s var(--key-press),
+              background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn-sm { border-radius: 9px; }
+.btn-lg { border-radius: 13px; }
+/* Sin barrido de brillo ni pulso: el énfasis lo da la forma, no un efecto */
+.btn-brand::after { content: none !important; }
+html.mx-on .hero-ctas .btn-brand { animation: none !important; }
+html.mx-on .btn::before { display: none; }
+
+/* Leyenda del ícono: una tapita propia dentro de la tecla */
+.btn > .bi {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 6px; font-size: 13px; line-height: 1;
+  transition: transform .2s var(--key-press), background-color .2s ease, color .2s ease;
+}
+.btn-sm > .bi { width: 18px; height: 18px; border-radius: 5px; font-size: 12px; }
+.btn-lg > .bi { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; }
+/* La flecha final se separa del texto con una ranura, como un atajo de teclado */
+.btn > .bi:last-child:not(:first-child) { margin-left: 2px; }
+
+/* ── Primario (naranja de marca) ── */
+.btn-brand {
+  color: #fff;
+  background: linear-gradient(180deg, #C8460D 0%, #C2410C 52%, #B23A0A 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .26),           /* luz en el borde superior */
+    inset 0 -3px 0 rgba(110, 32, 4, .55),             /* labio inferior */
+    0 1px 1px rgba(124, 45, 18, .3),
+    0 10px 18px -12px rgba(194, 65, 12, .75);
+}
+.btn-brand > .bi { background: rgba(0, 0, 0, .2); box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .12); }
+.btn-brand:hover, .btn-brand:focus-visible {
+  color: #fff !important;
+  background: linear-gradient(180deg, #CC4A0E 0%, #C2410C 52%, #B23A0A 100%) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .3),
+    inset 0 -3px 0 rgba(110, 32, 4, .55),
+    0 2px 2px rgba(124, 45, 18, .3),
+    0 16px 26px -14px rgba(194, 65, 12, .85);
+}
+.btn-brand:hover > .bi { background: rgba(0, 0, 0, .28); }
+.btn-brand:active {
+  color: #fff !important;
+  background: linear-gradient(180deg, #B23A0A 0%, #C2410C 100%) !important;
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 3px rgba(80, 22, 2, .45), inset 0 -1px 0 rgba(110, 32, 4, .4), 0 1px 1px rgba(124, 45, 18, .2);
+}
+
+/* ── Secundario claro ── */
+.btn-soft, .btn-danger-soft, .btn-success-soft {
+  background: linear-gradient(180deg, #FFFFFF, #F8FAFC);
+  box-shadow: inset 0 -2px 0 #E2E8F0, 0 1px 2px rgba(15, 23, 42, .06);
+}
+.btn-soft { color: var(--ink-800); border-color: #CBD5E1; }
+.btn-soft > .bi { background: var(--bg-2); color: var(--ink-600); box-shadow: inset 0 -1px 0 #E2E8F0; }
+.btn-soft:hover, .btn-soft:focus-visible {
+  color: var(--brand-strong) !important; border-color: #F0A472 !important;
+  background: linear-gradient(180deg, #FFFFFF, #FFF7F0) !important;
+  transform: translateY(-1px);
+  box-shadow: inset 0 -2px 0 #FBD3B4, 0 6px 14px -10px rgba(194, 65, 12, .5);
+}
+.btn-soft:hover > .bi, .btn-soft:focus-visible > .bi { background: var(--brand-soft); color: var(--brand-strong); box-shadow: inset 0 -1px 0 #FBD3B4; }
+
+.btn-danger-soft { border-color: #FCA5A5; }
+.btn-danger-soft > .bi { background: var(--red-soft); color: var(--red); }
+.btn-danger-soft:hover, .btn-danger-soft:focus-visible {
+  background: linear-gradient(180deg, #FFFFFF, #FEF2F2) !important; transform: translateY(-1px);
+  box-shadow: inset 0 -2px 0 #FECACA, 0 6px 14px -10px rgba(185, 28, 28, .45);
+}
+.btn-success-soft { border-color: #6EE7B7; }
+.btn-success-soft > .bi { background: var(--green-soft); color: var(--green); }
+.btn-success-soft:hover, .btn-success-soft:focus-visible {
+  background: linear-gradient(180deg, #FFFFFF, #ECFDF5) !important; transform: translateY(-1px);
+  box-shadow: inset 0 -2px 0 #A7F3D0, 0 6px 14px -10px rgba(4, 120, 87, .45);
+}
+.btn-soft:active, .btn-danger-soft:active, .btn-success-soft:active {
+  transform: translateY(1px); box-shadow: inset 0 2px 3px rgba(15, 23, 42, .1);
+}
+
+/* ── Peligro sólido (confirmar eliminación) ── */
+.btn-danger-solid {
+  background: linear-gradient(180deg, #C62828, #B91C1C 55%, #991B1B);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -3px 0 rgba(90, 10, 10, .55), 0 10px 18px -12px rgba(185, 28, 28, .7);
+}
+.btn-danger-solid > .bi { background: rgba(0, 0, 0, .2); }
+.btn-danger-solid:hover, .btn-danger-solid:focus-visible { background: linear-gradient(180deg, #C62828, #B91C1C) !important; transform: translateY(-1px); }
+.btn-danger-solid:active { transform: translateY(2px); box-shadow: inset 0 2px 3px rgba(60, 5, 5, .5); }
+
+/* ── Fantasma sobre fondo oscuro (hero) ── */
+.btn-ghost-light {
+  border-color: rgba(255, 255, 255, .42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 -2px 0 rgba(0, 0, 0, .35);
+}
+.btn-ghost-light > .bi { background: rgba(255, 255, 255, .12); }
+.btn-ghost-light:hover, .btn-ghost-light:focus-visible {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .06)) !important;
+  border-color: rgba(255, 255, 255, .8) !important; transform: translateY(-1px);
+}
+.btn-ghost-light:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35); }
+
+/* Botón de la barra (Solicitar asistencia) y botones pequeños: labio más fino */
+.btn-sm.btn-brand, .navbar-g .btn-brand { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -2px 0 rgba(110, 32, 4, .55), 0 6px 14px -10px rgba(194, 65, 12, .8); }
+.btn-sm.btn-soft, .btn-sm.btn-danger-soft, .btn-sm.btn-success-soft { box-shadow: inset 0 -1.5px 0 #E2E8F0; }
+
+/* Deshabilitado: la tecla queda "hundida" y plana, no solo transparente */
+.btn:disabled, .btn.disabled { opacity: .55; transform: none !important; box-shadow: inset 0 1px 2px rgba(15, 23, 42, .08) !important; }
+
+/* ── Enlaces de tarjeta (float-btn): fila de acción con tecla de flecha a la derecha ── */
+.float-btn { border-radius: var(--key-radius); box-shadow: inset 0 -2px 0 #E2E8F0; }
+.float-btn .bi {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+  background: var(--bg-2); color: var(--ink-600); box-shadow: inset 0 -1px 0 #E2E8F0;
+}
+.float-card:hover .float-btn, .float-btn:focus-visible {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -3px 0 rgba(110, 32, 4, .55), 0 10px 18px -12px rgba(194, 65, 12, .75);
+}
+.float-card:hover .float-btn .bi, .float-btn:focus-visible .bi { background: rgba(0, 0, 0, .2); color: #fff; box-shadow: none; transform: none; }
+
+/* ── Filtros (segmented control): el activo es una tecla presionada ── */
+.pills-g { background: var(--bg-2); box-shadow: inset 0 1px 2px rgba(15, 23, 42, .06); }
+.pill-g[aria-pressed="true"] {
+  background: linear-gradient(180deg, #1E293B, #111827);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -2px 0 #000, 0 4px 10px -6px rgba(17, 24, 39, .7);
+}
+.pill-g[aria-pressed="false"]:hover { background: #fff; box-shadow: inset 0 -1.5px 0 #E2E8F0; }
+
+/* Íconos dentro de botones: micro-desplazamientos solo de la tapita (respetan reducir movimiento) */
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.pref-reduce-motion) .btn:hover > .bi-arrow-right:last-child,
+  html:not(.pref-reduce-motion) .btn:hover > .bi-arrow-up-right:last-child { transform: translateX(2px); }
+}
+
+/* Reducir movimiento: las teclas no suben ni bajan, solo cambian de color/sombra */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:hover, .btn:active, .btn:focus-visible { transform: none !important; }
+}
+html.pref-reduce-motion .btn, html.pref-reduce-motion .btn:hover, html.pref-reduce-motion .btn:active { transform: none !important; }
+
+/* Alto contraste de Windows: sin degradados ni sombras, borde del sistema */
+@media (forced-colors: active) {
+  .btn, .btn > .bi, .float-btn .bi { box-shadow: none !important; background: ButtonFace !important; }
+}

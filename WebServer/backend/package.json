@@ -1,0 +1,29 @@
+{
+  "name": "samba-ad-users-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API REST para administrar usuarios de Samba Active Directory por LDAP",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --import ./scripts/test-env.js --test test/*.test.js",
+    "check": "node --check src/server.js && node --check src/config.js && node --check src/app.js && node --check src/routes/auth.js && node --check src/routes/users.js && node --check src/routes/agents.js && node --check src/routes/assets.js && node --check src/services/agentDataStore.js && node --check src/services/agentAssetService.js && node --check src/services/authService.js && node --check src/services/sessionStore.js && node --check src/services/userService.js && node --check src/ldap/userRepository.js && node --check src/ldap/roleGroups.js && node --check src/services/enrollmentStore.js && node --check src/services/enrollmentPool.js && node --check src/routes/enrollment.js && node --check ../frontend/js/assets.js",
+    "db:enrollment": "node scripts/migrate-enrollment.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "ldapts": "^8.0.10",
+    "zod": "^3.24.2",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16"
+  }
+}
