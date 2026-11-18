@@ -1,4 +1,4 @@
-param([ValidateSet('Stop','Install','Remove')][string]$Action = 'Install')
+param([ValidateSet('Stop','Prepare','Install','Remove')][string]$Action = 'Install')
 $ErrorActionPreference = 'Stop'
 $serviceName = 'GestioAppAgent'
 $root = Join-Path $env:ProgramData 'GestioApp'
@@ -49,6 +49,7 @@ try {
     if (!(Test-Path "$root\Config\api-token.txt")) {
         New-Item -ItemType File "$root\Config\api-token.txt" | Out-Null
     }
+    if ($Action -eq 'Prepare') { exit 0 }
     $config = Get-Content "$root\Config\agent.json" -Raw | ConvertFrom-Json
     if ($config.inventorySeconds -lt 30 -or $config.heartbeatSeconds -lt 15) { throw 'Intervalos no validos en agent.json' }
     $exe = Join-Path (Split-Path $PSScriptRoot -Parent) 'Agent\GestioApp.Agent.exe'
